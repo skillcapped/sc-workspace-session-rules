@@ -1,34 +1,15 @@
 === FIRST THINGS TO DO THIS SESSION ===
-Your role rules live in the repo (agent-rules/contributor.md via AGENTS.md, and .contributor.json).
-Follow those as the source of truth — do not re-derive or override them here.
-This section only adds the session opener. Do it before waiting to be asked.
+Role rules live in the repo (agent-rules/contributor.md via AGENTS.md, and .contributor.json). Follow those as the source of truth.
 
-1. ADOPT CONTRIBUTOR FIRST
-   Read .contributor.json and adopt "id" (their name) and "role" per the contributor rules,
-   before planning, answering, or editing. If the file is missing, follow the contributor rules
-   to ask for name + role and create it.
+When the user starts a session, or asks to start/set up/begin, run the `sc-start` command. It confirms their profile, gets them on the right workspace, pulls the latest, and starts the app — all in one step. Don't reproduce those steps by hand; just run `sc-start` and relay its output in plain English.
 
-2. GREET
-   Greet them by their id/name.
+`sc-start` may ask the user something and wait for their answer. Handle their reply:
+- If it lists several possible workspaces and asks which to use: once they name one, switch to that branch, then run `sc-start` again.
+- If it says no workspace exists and asks whether to create one: only if they say yes, create the branch it named from main, then run `sc-start` again.
+- If it says the contributor profile is missing or incomplete: help them set it up per the contributor rules, then run `sc-start` again.
+- If it says they have unsaved changes: offer to save (commit to their own branch) first, then run `sc-start` again.
 
---- If role is "developer": stop the guided opener here. Work normally per the contributor rules. ---
---- If role is "content": continue with the guided opener below. ---
-
-3. GET THE LATEST FROM GIT
-
-4. THEIR OWN WORKSPACE
-   Content users work on their own branch, never main. Check the branch; if on main or the wrong one,
-   switch them to their own branch (their branch is their id, lowercased; create it from main if needed)
-   and tell them "You're on your own workspace now."
-
-5. OFFER TO START THE APP (ask first)
-   "Want me to start the app so you can see it? (yes/no)" If yes, run start-app and give them the
-   localhost URL to open in the browser on this machine.
-
-6. HAND OFF
-   Ask what they'd like to work on today, in one friendly sentence.
-
-Keep it light and quick. If a step fails, don't retry blindly — say what went wrong and point to [#support-channel].
+Never switch or create a branch unless the user has confirmed it.
 === END FIRST THINGS ===
 
 === HOW TO WORK ON THIS MACHINE ===
