@@ -4,14 +4,12 @@
 # Edit here and push; machines fetch the latest via the sc-start launcher.
 set -u
 
-SUPPORT="[#support-channel]"
+SUPPORT="the dev team"
 
-# start_app is called at the very end no matter what happens above.
-# Guard cases below "return" out of the git section instead of exiting,
-# so the app always starts.
+# Workspace branch convention for content users: "<id>-main" (lowercased).
 
+# git setup never aborts the script — the app always starts at the end.
 run_git_setup() {
-  # --- Must be inside a project ---
   REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"
   if [ -z "$REPO_ROOT" ]; then
     echo "(Not inside a project folder, so skipping git setup.)"
@@ -19,7 +17,6 @@ run_git_setup() {
   fi
   cd "$REPO_ROOT" || return
 
-  # --- Read the contributor profile ---
   if [ ! -f "$REPO_ROOT/.contributor.json" ]; then
     echo "You don't have a contributor profile yet."
     echo "Ask me: \"set up my contributor profile\" -- I'll create it, then run startup again."
@@ -37,21 +34,21 @@ run_git_setup() {
 
   echo "Hi ${ID}! You're set up as: ${ROLE}."
 
-  # Developers: just pull current branch, no branch management.
+  # Developers: just sync current branch, no workspace management.
   if [ "$ROLE" != "content" ]; then
-    pull_latest
+    sync_branch
     return
   fi
 
-  # --- Content users: make sure they're on their own workspace branch ---
-  local key current
+  # --- Content users: ensure they're on their own workspace branch "<id>-main" ---
+  local key branch current
   key="$(echo "$ID" | tr '[:upper:]' '[:lower:]')"
+  branch="${key}-main"
   current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
 
-  # Already on a branch that belongs to them? Leave it.
-  if branch_belongs "$current" "$key"; then
-    echo "You're on your own workspace (${current})."
-    pull_latest
+  if [ "$current" = "$branch" ]; then
+    echo "You're on your own workspace (${branch})."
+    sync_branch
     return
   fi
 
@@ -62,50 +59,49 @@ run_git_setup() {
     return
   fi
 
-  # Find candidate branches (local + remote) that look like theirs.
-  local matches
-  matches="$(list_matching_branches "$key")"
-  local count
-  count="$(printf '%s\n' "$matches" | grep -c . )"
-
-  if [ "$count" -eq 1 ]; then
-    git checkout "$matches" >/dev/null 2>&1
-    echo "You're on your own workspace (${matches})."
-    pull_latest
-  elif [ "$count" -gt 1 ]; then
-    echo "I found more than one workspace that could be yours:"
-    printf '  - %s\n' $matches
-    echo "Which one do you want to use? (tell me the name) -- I won't switch or create anything until you say."
+  if git show-ref --verify --quiet "refs/heads/${branch}"; then
+    # Local branch exists
+    git checkout "$branch" >/dev/null 2>&1
+    echo "You're on your own workspace (${branch})."
+  elif git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+    # Exists on the remote — check it out tracking origin
+    git checkout -t "origin/${branch}" >/dev/null 2>&1
+    echo "You're on your own workspace (${branch})."
   else
-    echo "I couldn't find an existing workspace branch for '${ID}'."
-    echo "Want me to create a new one named '${key}' from main? (yes/no) -- I won't create it until you confirm."
+    # Doesn't exist anywhere — create from main and publish it
+    git checkout main >/dev/null 2>&1
+    git checkout -b "$branch" >/dev/null 2>&1
+    if git push -u origin "$branch" >/dev/null 2>&1; then
+      echo "Created and saved your workspace (${branch}) to the cloud."
+    else
+      echo "Created your workspace (${branch}), but couldn't save it to the cloud yet."
+      echo "It's safe on this machine for now. If it keeps happening, contact ${SUPPORT}."
+    fi
   fi
+
+  sync_branch
 }
 
-# A branch "belongs" to the user if it equals the key or starts with "key-" / "key/".
-branch_belongs() {
-  local b="$1" key="$2"
-  [ "$b" = "$key" ] || [ "${b#${key}-}" != "$b" ] || [ "${b#${key}/}" != "$b" ]
-}
+# Pull latest, and make sure the branch is published (has an upstream).
+sync_branch() {
+  local branch upstream
+  branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  upstream="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)"
 
-# List local + remote branches matching the user's key, de-duplicated, remotes stripped of "origin/".
-list_matching_branches() {
-  local key="$1"
-  {
-    git for-each-ref --format='%(refname:short)' refs/heads/
-    git for-each-ref --format='%(refname:short)' refs/remotes/origin/ | sed 's#^origin/##'
-  } 2>/dev/null \
-    | grep -vi '^HEAD$' \
-    | awk -v k="$key" 'tolower($0)==k || index(tolower($0), k"-")==1 || index(tolower($0), k"/")==1' \
-    | sort -u
-}
+  if [ -z "$upstream" ]; then
+    # No upstream yet: publish rather than warn about a failed pull.
+    if git push -u origin "$branch" >/dev/null 2>&1; then
+      echo "Saved your workspace to the cloud."
+    fi
+    # If the push fails (e.g. offline), stay quiet — nothing is broken locally.
+    return
+  fi
 
-pull_latest() {
   echo "Getting the latest version..."
   if git pull --ff-only >/dev/null 2>&1; then
     echo "Up to date."
   else
-    echo "Couldn't auto-update (usually fine). If something looks off, ping ${SUPPORT}."
+    echo "Couldn't auto-update just now. That's usually fine — if anything looks off, contact ${SUPPORT}."
   fi
 }
 
