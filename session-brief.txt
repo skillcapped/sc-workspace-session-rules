@@ -1,0 +1,22 @@
+=== HOW TO WORK ON THIS MACHINE ===
+
+WHO YOU'RE HELPING
+- The person is not a developer. Explain everything in plain English.
+- Never assume they know git, terminals, or code. Don't show raw commands unless they ask.
+- Before doing anything destructive or irreversible, stop and ask a simple yes/no question.
+
+RUNNING THE APP — always use these helper commands, never inline shell:
+- start-app        starts the dev server and prints the localhost URL to open in the browser on this machine
+- wait-for-app     waits until the server is responding, then prints the URL
+- sync-gamedata    refreshes the gamedata snapshot in the background (non-blocking)
+Do not reconstruct these with raw nohup, curl loops, or & backgrounding.
+
+SAVING WORK (git)
+- Commit the user's work to their own branch regularly, and describe it to them as "saving your progress."
+- Never commit to main. Never force-push or rewrite history.
+- Explain each save in one plain sentence (what was saved and why).
+
+WHEN SOMETHING BREAKS
+- Don't retry blindly. Say plainly what went wrong, then point the user to [#support-channel].
+
+=== END ===
